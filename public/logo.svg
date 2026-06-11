@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none">
+  <path d="M8 45 C8 25 18 10 30 10 C38 10 42 18 42 26 C42 34 38 42 30 42 C26 42 22 40 20 36 L20 45 Z" fill="#7BC043"/>
+  <ellipse cx="30" cy="52" rx="12" ry="3" fill="#7BC043" opacity="0.3"/>
+  <text x="52" y="38" font-family="Outfit, sans-serif" font-weight="900" font-size="28">
+    <tspan fill="#5B2A86">DAY</tspan><tspan fill="#FF6B35">CRUNCH</tspan>
+  </text>
+</svg>
