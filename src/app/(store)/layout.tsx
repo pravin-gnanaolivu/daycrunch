@@ -9,8 +9,10 @@ export default function StoreLayout({
 }) {
   return (
     <>
-      <AnnouncementBar />
-      <Header />
+      <div className="sticky top-0 z-[90]">
+        <AnnouncementBar />
+        <Header />
+      </div>
       <main className="flex-1 flex flex-col min-h-screen">{children}</main>
       <Footer />
     </>

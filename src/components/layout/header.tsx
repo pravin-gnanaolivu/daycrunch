@@ -9,6 +9,7 @@ import {
   User,
   Menu,
   X,
+  ChevronRight,
 } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
@@ -38,8 +39,18 @@ export function Header() {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileOpen]);
+
   return (
-    <header className="sticky top-0 z-50 bg-cream/95 backdrop-blur-md border-b border-gray-100">
+    <>
+    <header className="bg-cream/95 backdrop-blur-md border-b border-gray-100">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 lg:h-18 gap-4">
           <button
@@ -124,48 +135,94 @@ export function Header() {
           </div>
         )}
       </div>
+    </header>
+
+    <div
+      className={cn(
+        "lg:hidden fixed inset-0 z-[100] transition-opacity duration-300",
+        mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+      )}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Navigation menu"
+      aria-hidden={!mobileOpen}
+    >
+      <div
+        className="absolute inset-0 bg-charcoal/50 backdrop-blur-[2px]"
+        aria-hidden="true"
+        onClick={() => setMobileOpen(false)}
+      />
 
       <div
         className={cn(
-          "lg:hidden fixed inset-0 top-[65px] bg-cream z-40 transition-transform duration-300",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+          "absolute inset-y-0 left-0 flex w-full max-w-[340px] flex-col bg-cream shadow-[8px_0_32px_rgba(91,42,134,0.15)] transition-transform duration-300 ease-out",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <nav className="flex flex-col p-6 gap-1">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-lg font-medium text-charcoal hover:text-sunset py-3 border-b border-gray-100"
-              onClick={() => setMobileOpen(false)}
-            >
-              {link.label}
-            </Link>
-          ))}
-          <p className="text-xs font-semibold text-muted uppercase tracking-wider mt-4 mb-2">
-            Categories
-          </p>
-          {CATEGORIES.map((cat) => (
-            <Link
-              key={cat.slug}
-              href={`/shop/${cat.slug}`}
-              className="flex items-center gap-3 py-2.5 text-charcoal hover:text-sunset"
-              onClick={() => setMobileOpen(false)}
-            >
-              <span>{cat.emoji}</span>
-              <span>{cat.name}</span>
-            </Link>
-          ))}
-          <Link
-            href="/account"
-            className="mt-4 flex items-center gap-2 text-charcoal hover:text-sunset py-3"
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-plum/10 px-4">
+          <Logo
+            size="sm"
             onClick={() => setMobileOpen(false)}
+          />
+          <button
+            type="button"
+            className="rounded-full p-2 text-charcoal transition-colors hover:bg-white/80"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close menu"
           >
-            <User className="h-5 w-5" />
-            My Account
-          </Link>
-        </nav>
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain touch-pan-y">
+          <nav className="space-y-1 px-4 pt-5">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="flex items-center justify-between rounded-xl px-4 py-3.5 text-[15px] font-semibold text-charcoal transition-colors hover:bg-white active:bg-white/80"
+                onClick={() => setMobileOpen(false)}
+              >
+                {link.label}
+                <ChevronRight className="h-4 w-4 shrink-0 text-plum/35" />
+              </Link>
+            ))}
+          </nav>
+
+          <div className="mt-6 px-4">
+            <p className="mb-3 px-1 text-[11px] font-bold uppercase tracking-widest text-plum/70">
+              Shop by category
+            </p>
+            <div className="grid grid-cols-2 gap-2.5">
+              {CATEGORIES.map((cat) => (
+                <Link
+                  key={cat.slug}
+                  href={`/shop/${cat.slug}`}
+                  className="flex flex-col gap-1 rounded-xl border border-plum/8 bg-white px-3 py-3 transition-colors hover:border-sunset/35 hover:shadow-sm"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <span className="text-xl leading-none">{cat.emoji}</span>
+                  <span className="text-sm font-semibold leading-tight text-charcoal">
+                    {cat.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-auto px-4 py-6">
+            <Link
+              href="/account"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-plum py-3.5 text-sm font-semibold text-white transition-colors hover:bg-plum/90"
+              onClick={() => setMobileOpen(false)}
+            >
+              <User className="h-4 w-4" />
+              My Account
+            </Link>
+          </div>
+        </div>
       </div>
-    </header>
+    </div>
+    </>
   );
 }

@@ -7,9 +7,10 @@ interface LogoProps {
   className?: string;
   size?: "sm" | "md" | "lg";
   showTagline?: boolean;
+  onClick?: () => void;
 }
 
-export function Logo({ className, size = "md", showTagline = false }: LogoProps) {
+export function Logo({ className, size = "md", showTagline = false, onClick }: LogoProps) {
   const sizes = {
     sm: "text-lg",
     md: "text-2xl",
@@ -17,7 +18,7 @@ export function Logo({ className, size = "md", showTagline = false }: LogoProps)
   };
 
   return (
-    <Link href="/" className={cn("group inline-flex flex-col", className)}>
+    <Link href="/" className={cn("group inline-flex flex-col", className)} onClick={onClick}>
       <div className={cn("flex items-center gap-1.5 font-black tracking-tight", sizes[size])}>
         <svg
           viewBox="0 0 32 32"

@@ -14,7 +14,7 @@ export function AnnouncementBar() {
   }, []);
 
   return (
-    <div className="bg-plum text-white text-center text-xs sm:text-sm py-2.5 px-4 relative overflow-hidden">
+    <div className="bg-plum text-white text-center text-xs sm:text-sm h-10 flex items-center justify-center px-4 relative overflow-hidden">
       <div className="flex items-center justify-center gap-2">
         <span className="inline-block h-1.5 w-1.5 rounded-full bg-golden animate-pulse" />
         <p className="font-medium transition-opacity duration-500">
