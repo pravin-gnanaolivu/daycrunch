@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { fetchAllProducts, fetchProductBySlug } from "@/lib/db-queries";
+import { fetchAllProducts, fetchProductBySlug, fetchProductsByCategory } from "@/lib/db-queries";
 import { MOCK_PRODUCTS } from "@/lib/mock-data";
 import { ProductPageClient } from "./product-client";
 
@@ -23,18 +23,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const product = await fetchProductBySlug(slug);
   if (!product) return { title: "Product Not Found" };
 
-  const primaryImageUrl =
-    typeof product.images?.[0] === "string"
-      ? product.images[0]
-      : product.images?.[0]?.url;
+  const primaryImageUrl = product.images?.[0];
+  const imageUrl = typeof primaryImageUrl === "string" ? primaryImageUrl : undefined;
+
+  const description = product.shortDescription || product.description || "";
 
   return {
     title: product.name,
-    description: product.shortDescription || product.description,
+    description,
     openGraph: {
       title: product.name,
-      description: product.shortDescription || product.description,
-      images: primaryImageUrl ? [{ url: primaryImageUrl }] : [],
+      description,
+      images: imageUrl ? [{ url: imageUrl }] : [],
     },
   };
 }
@@ -44,20 +44,26 @@ export default async function ProductPage({ params }: Props) {
   const product = await fetchProductBySlug(slug);
   if (!product) notFound();
 
+  const relatedProducts = product.categorySlug
+    ? (await fetchProductsByCategory(product.categorySlug))
+        .filter((p) => p.id !== product.id)
+        .slice(0, 4)
+    : [];
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
     description: product.description,
-    image: product.images?.map((img: any) => img.url || img),
+    image: product.images,
     sku: product.sku,
     brand: { "@type": "Brand", name: "DayCrunch" },
     offers: {
       "@type": "Offer",
-      price: product.basePrice,
+      price: product.price,
       priceCurrency: "INR",
       availability:
-        product.stock > 0
+        (product.stock ?? 0) > 0
           ? "https://schema.org/InStock"
           : "https://schema.org/OutOfStock",
     },
@@ -74,7 +80,10 @@ export default async function ProductPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <ProductPageClient slug={slug} />
+      <ProductPageClient
+        initialProduct={product}
+        relatedProducts={relatedProducts}
+      />
     </>
   );
 }

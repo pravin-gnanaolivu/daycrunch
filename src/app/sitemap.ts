@@ -38,9 +38,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     products = MOCK_PRODUCTS;
   }
 
-  const productPages = products.map((product: any) => ({
+  const productPages = products.map((product) => ({
     url: `${baseUrl}/product/${product.slug}`,
-    lastModified: new Date(product.updatedAt || product.createdAt),
+    lastModified: new Date(),
     changeFrequency: "weekly" as const,
     priority: 0.6,
   }));

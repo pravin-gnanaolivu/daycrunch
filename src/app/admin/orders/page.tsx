@@ -1,12 +1,9 @@
+import { requireAdmin } from "@/lib/admin-auth";
+import { fetchAdminOrders } from "@/lib/db-queries";
+import { formatPrice } from "@/lib/utils";
+import { AdminPageHeader, AdminTable } from "@/components/admin/admin-ui";
 import { Badge } from "@/components/ui/badge";
-
-const ORDERS = [
-  { id: "DC-LM2K-A3F7", customer: "Priya Sharma", email: "priya@email.com", total: 1299, status: "DELIVERED", date: "2026-06-10" },
-  { id: "DC-LM1J-B2E6", customer: "Rahul Mehta", email: "rahul@email.com", total: 849, status: "SHIPPED", date: "2026-06-09" },
-  { id: "DC-LM1H-C1D5", customer: "Ananya Patel", email: "ananya@email.com", total: 2499, status: "PROCESSING", date: "2026-06-08" },
-  { id: "DC-LM1G-D0C4", customer: "Vikram Singh", email: "vikram@email.com", total: 449, status: "CONFIRMED", date: "2026-06-08" },
-  { id: "DC-LM1F-E9B3", customer: "Sneha Reddy", email: "sneha@email.com", total: 1999, status: "PENDING", date: "2026-06-07" },
-];
+import { OrderStatusSelect } from "./order-status-select";
 
 const STATUS_COLORS: Record<string, "default" | "secondary" | "accent" | "sale"> = {
   PENDING: "sale",
@@ -14,43 +11,87 @@ const STATUS_COLORS: Record<string, "default" | "secondary" | "accent" | "sale">
   PROCESSING: "default",
   SHIPPED: "secondary",
   DELIVERED: "accent",
+  CANCELLED: "sale",
+  REFUNDED: "sale",
 };
 
-export default function AdminOrdersPage() {
+export default async function AdminOrdersPage() {
+  await requireAdmin();
+  const orders = await fetchAdminOrders();
+
   return (
     <div>
-      <h1 className="text-2xl font-black text-charcoal mb-6">Orders</h1>
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-soft-beige">
-            <tr>
-              <th className="text-left p-4 font-semibold">Order</th>
-              <th className="text-left p-4 font-semibold hidden sm:table-cell">Customer</th>
-              <th className="text-left p-4 font-semibold">Total</th>
-              <th className="text-left p-4 font-semibold">Status</th>
-              <th className="text-left p-4 font-semibold hidden md:table-cell">Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ORDERS.map((order) => (
-              <tr key={order.id} className="border-t border-gray-50 hover:bg-soft-beige/50 cursor-pointer">
-                <td className="p-4 font-semibold text-charcoal">{order.id}</td>
-                <td className="p-4 hidden sm:table-cell">
-                  <p className="text-charcoal">{order.customer}</p>
-                  <p className="text-xs text-muted">{order.email}</p>
-                </td>
-                <td className="p-4 font-semibold">₹{order.total}</td>
-                <td className="p-4">
-                  <Badge variant={STATUS_COLORS[order.status] ?? "default"}>
-                    {order.status}
-                  </Badge>
-                </td>
-                <td className="p-4 text-muted hidden md:table-cell">{order.date}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <AdminPageHeader
+        title="Orders"
+        description={`${orders.length} total orders`}
+      />
+
+      <AdminTable
+        data={orders}
+        emptyMessage="No orders yet"
+        columns={[
+          {
+            key: "orderNumber",
+            header: "Order",
+            render: (o) => (
+              <span className="font-semibold text-charcoal">{o.orderNumber}</span>
+            ),
+          },
+          {
+            key: "customer",
+            header: "Customer",
+            className: "hidden sm:table-cell",
+            render: (o) => (
+              <div>
+                <p className="text-charcoal">{o.user?.name ?? "Guest"}</p>
+                <p className="text-xs text-muted">{o.user?.email ?? o.guestEmail}</p>
+              </div>
+            ),
+          },
+          {
+            key: "total",
+            header: "Total",
+            render: (o) => (
+              <span className="font-semibold">{formatPrice(Number(o.total))}</span>
+            ),
+          },
+          {
+            key: "payment",
+            header: "Payment",
+            className: "hidden md:table-cell",
+            render: (o) => (
+              <div className="space-y-1">
+                <Badge variant={o.paymentStatus === "PAID" ? "accent" : "sale"}>
+                  {o.paymentStatus}
+                </Badge>
+                {o.paymentMethod && (
+                  <p className="text-xs text-muted">{o.paymentMethod}</p>
+                )}
+              </div>
+            ),
+          },
+          {
+            key: "status",
+            header: "Status",
+            render: (o) => (
+              <div className="flex items-center gap-2">
+                <Badge variant={STATUS_COLORS[o.status] ?? "default"}>{o.status}</Badge>
+                <OrderStatusSelect orderId={o.id} currentStatus={o.status} />
+              </div>
+            ),
+          },
+          {
+            key: "date",
+            header: "Date",
+            className: "hidden lg:table-cell",
+            render: (o) => (
+              <span className="text-muted">
+                {new Date(o.createdAt).toLocaleDateString("en-IN")}
+              </span>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

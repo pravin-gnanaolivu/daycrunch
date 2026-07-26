@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
+import { ProductImage } from "@/components/ui/product-image";
 import { MOCK_BLOG_POSTS } from "@/lib/mock-data";
 import { ArrowRight } from "lucide-react";
 
@@ -23,12 +23,11 @@ export default function BlogPage() {
             className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-lg transition-all hover:-translate-y-1"
           >
             <div className="relative aspect-[16/10] bg-soft-beige">
-              <Image
+              <ProductImage
                 src={post.coverImage}
                 alt={post.title}
-                fill
-                className="object-cover group-hover:scale-105 transition-transform duration-500"
-                sizes="(max-width: 768px) 100vw, 33vw"
+                size="card"
+                className="group-hover:scale-105 transition-transform duration-500"
               />
             </div>
             <div className="p-6">

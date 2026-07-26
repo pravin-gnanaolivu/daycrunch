@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Heart,
@@ -27,11 +27,16 @@ const NAV_LINKS = [
 ];
 
 export function Header() {
+  const [mounted, setMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const cartCount = useCartStore((s) => s.getItemCount());
   const wishlistCount = useWishlistStore((s) => s.getCount());
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 bg-cream/95 backdrop-blur-md border-b border-gray-100">
@@ -73,7 +78,7 @@ export function Header() {
               aria-label="Wishlist"
             >
               <Heart className="h-5 w-5" />
-              {wishlistCount > 0 && (
+              {mounted && wishlistCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-sunset text-white text-[10px] font-bold flex items-center justify-center">
                   {wishlistCount}
                 </span>
@@ -85,7 +90,7 @@ export function Header() {
               aria-label="Cart"
             >
               <ShoppingBag className="h-5 w-5" />
-              {cartCount > 0 && (
+              {mounted && cartCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-sunset text-white text-[10px] font-bold flex items-center justify-center">
                   {cartCount}
                 </span>

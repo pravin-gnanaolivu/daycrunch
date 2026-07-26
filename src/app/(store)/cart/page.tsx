@@ -1,6 +1,7 @@
 "use client";
 
-import Image from "next/image";
+import { useEffect, useState } from "react";
+import { ProductImage } from "@/components/ui/product-image";
 import Link from "next/link";
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,10 +9,49 @@ import { Input } from "@/components/ui/input";
 import { useCartStore } from "@/store/cart-store";
 import { formatPrice } from "@/lib/utils";
 import { FREE_SHIPPING_THRESHOLD, TAX_RATE } from "@/lib/constants";
+import { toast } from "sonner";
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, getSubtotal, couponCode, couponDiscount, applyCoupon } =
     useCartStore();
+  const [validated, setValidated] = useState(false);
+
+  useEffect(() => {
+    const validateCart = async () => {
+      if (items.length === 0) {
+        setValidated(true);
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/products/by-ids", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: items.map((i) => i.productId) }),
+        });
+        const { products } = await res.json();
+        const activeIds = new Set(products.map((p: { id: string }) => p.id));
+
+        let removed = false;
+        for (const item of items) {
+          if (!activeIds.has(item.productId)) {
+            removeItem(item.productId, item.variantId);
+            removed = true;
+          }
+        }
+        if (removed) {
+          toast.error("Unavailable products were removed from your cart");
+        }
+      } catch {
+        // Keep cart as-is if validation fails
+      } finally {
+        setValidated(true);
+      }
+    };
+
+    validateCart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const subtotal = getSubtotal();
   const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : 99;
@@ -27,6 +67,14 @@ export default function CartPage() {
       applyCoupon(code, 50);
     }
   };
+
+  if (!validated) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center text-muted">
+        Validating cart...
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -56,7 +104,7 @@ export default function CartPage() {
                 href={`/product/${item.slug}`}
                 className="relative w-24 h-24 rounded-xl overflow-hidden bg-soft-beige flex-shrink-0"
               >
-                <Image src={item.image} alt={item.name} fill className="object-cover" sizes="96px" />
+                <ProductImage src={item.image} alt={item.name} size="thumb" />
               </Link>
               <div className="flex-1 min-w-0">
                 <Link

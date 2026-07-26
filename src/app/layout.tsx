@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import { Toaster } from "sonner";
+import { Providers } from "@/components/providers";
 import { BRAND } from "@/lib/constants";
 import "./globals.css";
 
@@ -55,7 +56,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${outfit.variable} h-full`}>
       <body className="min-h-full antialiased">
-        {children}
+        <Providers>{children}</Providers>
         <Toaster position="bottom-right" richColors />
       </body>
     </html>

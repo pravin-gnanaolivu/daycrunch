@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import {
   Star,
   Heart,
@@ -17,25 +15,44 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProductCard } from "@/components/product/product-card";
+import { ProductImage } from "@/components/ui/product-image";
 import { formatPrice, calculateDiscount, cn } from "@/lib/utils";
 import { MOCK_REVIEWS } from "@/lib/mock-data";
 import { useCartStore } from "@/store/cart-store";
 import { useWishlistStore } from "@/store/wishlist-store";
 import { useRecentlyViewedStore } from "@/store/recently-viewed-store";
+import type { Product } from "@/types";
 import { toast } from "sonner";
 
-const API_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-interface ProductPageClientProps {
-  slug: string;
+function getImageUrl(img: string | { url?: string } | undefined): string {
+  if (!img) return "";
+  return typeof img === "string" ? img : img.url ?? "";
 }
 
-export function ProductPageClient({ slug }: ProductPageClientProps) {
-  const [product, setProduct] = useState<any>(null);
-  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+function getCategoryName(product: Product & { category?: Product["category"] | { name?: string } }) {
+  return typeof product.category === "string"
+    ? product.category
+    : product.category?.name ?? "";
+}
+
+function getCategorySlug(product: Product) {
+  return product.categorySlug ?? (typeof product.category === "object" && product.category && "slug" in product.category
+    ? (product.category as { slug?: string }).slug
+    : undefined);
+}
+
+interface ProductPageClientProps {
+  initialProduct: Product;
+  relatedProducts?: Product[];
+}
+
+export function ProductPageClient({
+  initialProduct,
+  relatedProducts = [],
+}: ProductPageClientProps) {
+  const [product] = useState(initialProduct);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedVariant, setSelectedVariant] = useState<any>(null);
+  const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0] ?? null);
   const [quantity, setQuantity] = useState(1);
 
   const addToCart = useCartStore((s) => s.addItem);
@@ -43,57 +60,29 @@ export function ProductPageClient({ slug }: ProductPageClientProps) {
   const addRecentlyViewed = useRecentlyViewedStore((s) => s.addItem);
 
   useEffect(() => {
-    const loadProduct = async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/products/${slug}`);
-        if (!res.ok) {
-          notFound();
-          return;
-        }
+    addRecentlyViewed(product.id);
+  }, [product.id, addRecentlyViewed]);
 
-        const prod = await res.json();
-        setProduct(prod);
-        setSelectedVariant(prod.variants?.[0]);
-        addRecentlyViewed(prod.id);
-
-        // Fetch related products from the same category
-        if (prod.category?.slug) {
-          const relatedRes = await fetch(
-            `${API_URL}/api/categories/${prod.category.slug}/products?limit=4`,
-          );
-          const relatedData = await relatedRes.json();
-          setRelatedProducts(
-            relatedData.filter((p: any) => p.id !== prod.id).slice(0, 4),
-          );
-        }
-      } catch (error) {
-        console.error("Error loading product:", error);
-        notFound();
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProduct();
-  }, [slug, addRecentlyViewed]);
-
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="text-center">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!product) notFound();
-
-  const primaryImage =
-    product.images?.[selectedImage]?.url || product.images?.[selectedImage];
-  const price = selectedVariant?.price ?? product.basePrice;
-  const discount = calculateDiscount(price, product.compareAtPrice);
+  const images = product.images ?? [];
+  const primaryImage = getImageUrl(images[selectedImage]);
+  const basePrice = Number(product.basePrice ?? product.price ?? 0);
+  const compareAt = product.compareAtPrice ? Number(product.compareAtPrice) : undefined;
+  const price = selectedVariant?.price ?? basePrice;
+  const discount = calculateDiscount(Number(price), compareAt);
   const isWishlisted = hasItem(product.id);
+  const categorySlug = getCategorySlug(product);
+  const categoryName = getCategoryName(product);
+  const reviewCount = product.reviewCount ?? 0;
+
+  const isAvailable =
+    product.isActive !== false && (product.stock ?? 0) > 0;
 
   const handleAddToCart = () => {
+    if (!isAvailable) {
+      toast.error("This product is currently unavailable");
+      return;
+    }
+
     addToCart({
       productId: product.id,
       variantId: selectedVariant?.id,
@@ -124,12 +113,13 @@ export function ProductPageClient({ slug }: ProductPageClientProps) {
             Shop
           </Link>
           <ChevronRight className="h-3 w-3" />
-          <Link
-            href={`/shop/${product.category?.slug}`}
-            className="hover:text-sunset"
-          >
-            {product.category?.name}
-          </Link>
+          {categorySlug ? (
+            <Link href={`/shop/${categorySlug}`} className="hover:text-sunset">
+              {categoryName}
+            </Link>
+          ) : (
+            <span>{categoryName}</span>
+          )}
           <ChevronRight className="h-3 w-3" />
           <span className="text-charcoal font-medium truncate">
             {product.name}
@@ -139,13 +129,11 @@ export function ProductPageClient({ slug }: ProductPageClientProps) {
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
           <div>
             <div className="relative aspect-square rounded-3xl overflow-hidden bg-soft-beige mb-4">
-              <Image
+              <ProductImage
                 src={primaryImage}
                 alt={product.name}
-                fill
-                className="object-cover"
+                size="detail"
                 priority
-                sizes="(max-width: 1024px) 100vw, 50vw"
               />
               {product.isBestSeller && (
                 <Badge variant="sale" className="absolute top-4 left-4">
@@ -153,9 +141,9 @@ export function ProductPageClient({ slug }: ProductPageClientProps) {
                 </Badge>
               )}
             </div>
-            {product.images?.length > 1 && (
+            {images.length > 1 && (
               <div className="flex gap-3">
-                {product.images.map((img: any, i: number) => (
+                {images.map((img, i) => (
                   <button
                     key={i}
                     onClick={() => setSelectedImage(i)}
@@ -166,12 +154,10 @@ export function ProductPageClient({ slug }: ProductPageClientProps) {
                         : "border-transparent",
                     )}
                   >
-                    <Image
-                      src={img.url || img}
+                    <ProductImage
+                      src={getImageUrl(img)}
                       alt=""
-                      fill
-                      className="object-cover"
-                      sizes="80px"
+                      size="thumb"
                     />
                   </button>
                 ))}
@@ -181,7 +167,7 @@ export function ProductPageClient({ slug }: ProductPageClientProps) {
 
           <div>
             <p className="text-sm font-medium text-muted uppercase tracking-wider">
-              {product.category?.name}
+              {categoryName}
             </p>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-charcoal mt-1">
               {product.name}
@@ -194,7 +180,7 @@ export function ProductPageClient({ slug }: ProductPageClientProps) {
                     key={i}
                     className={cn(
                       "h-4 w-4",
-                      i < Math.floor(product.rating)
+                      i < Math.floor(product.rating ?? 0)
                         ? "fill-golden text-golden"
                         : "text-gray-200",
                     )}
@@ -202,7 +188,7 @@ export function ProductPageClient({ slug }: ProductPageClientProps) {
                 ))}
               </div>
               <span className="text-sm text-muted">
-                {product.rating} ({product.reviewCount} reviews)
+                {product.rating ?? 0} ({reviewCount} reviews)
               </span>
             </div>
 
@@ -210,10 +196,10 @@ export function ProductPageClient({ slug }: ProductPageClientProps) {
               <span className="text-3xl font-black text-charcoal">
                 {formatPrice(Number(price))}
               </span>
-              {product.compareAtPrice && (
+              {compareAt && (
                 <>
                   <span className="text-lg text-muted line-through">
-                    {formatPrice(Number(product.compareAtPrice))}
+                    {formatPrice(compareAt)}
                   </span>
                   {discount > 0 && (
                     <Badge variant="default">{discount}% OFF</Badge>
@@ -226,13 +212,13 @@ export function ProductPageClient({ slug }: ProductPageClientProps) {
               {product.shortDescription}
             </p>
 
-            {product.variants?.length > 0 && (
+            {product.variants && product.variants.length > 0 && (
               <div className="mt-6">
                 <p className="text-sm font-semibold text-charcoal mb-3">
                   Select Size
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {product.variants.map((variant: any) => (
+                  {product.variants.map((variant) => (
                     <button
                       key={variant.id}
                       onClick={() => setSelectedVariant(variant)}
@@ -282,16 +268,23 @@ export function ProductPageClient({ slug }: ProductPageClientProps) {
               </Button>
             </div>
 
+            {!isAvailable && (
+              <p className="mt-4 text-sm font-semibold text-sunset">
+                This product is currently unavailable
+              </p>
+            )}
+
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              <Button size="lg" className="flex-1" onClick={handleAddToCart}>
+              <Button size="lg" className="flex-1" onClick={handleAddToCart} disabled={!isAvailable}>
                 <ShoppingBag className="h-5 w-5" />
-                Add to Cart
+                {isAvailable ? "Add to Cart" : "Unavailable"}
               </Button>
               <Button
                 size="lg"
                 variant="secondary"
                 className="flex-1"
                 onClick={handleBuyNow}
+                disabled={!isAvailable}
               >
                 Buy Now
               </Button>
@@ -308,7 +301,7 @@ export function ProductPageClient({ slug }: ProductPageClientProps) {
               </div>
             </div>
 
-            {product.stock <= product.stock * 0.2 && product.stock > 0 && (
+            {(product.stock ?? 0) <= (product.stock ?? 0) * 0.2 && (product.stock ?? 0) > 0 && (
               <p className="mt-4 text-sm font-semibold text-sunset">
                 Only {product.stock} left in stock!
               </p>
@@ -409,7 +402,7 @@ export function ProductPageClient({ slug }: ProductPageClientProps) {
               You May Also Like
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
-              {relatedProducts.map((p: any) => (
+              {relatedProducts.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
             </div>

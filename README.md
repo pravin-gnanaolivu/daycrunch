@@ -34,20 +34,30 @@ npm install
 # Set up environment
 cp .env.example .env.local
 
-# Generate Prisma client
-npx prisma generate
+# Start PostgreSQL (Docker)
+docker compose up -d
 
-# Push database schema (requires PostgreSQL)
-npx prisma db push
-
-# Seed database
+# Push schema & seed database
+npm run db:push
 npm run db:seed
+
+# Or all-in-one:
+npm run db:setup
 
 # Start development server
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
+
+### Login Credentials (after seed)
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@daycrunch.in | admin123 |
+| Customer | priya@email.com | customer123 |
+
+Admin panel: [http://localhost:3000/admin](http://localhost:3000/admin)
 
 ## Project Structure
 

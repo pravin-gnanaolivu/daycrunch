@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: daycrunch-db
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: daycrunch
+      POSTGRES_PASSWORD: daycrunch
+      POSTGRES_DB: daycrunch
+    volumes:
+      - daycrunch_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U daycrunch -d daycrunch"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  daycrunch_pgdata:

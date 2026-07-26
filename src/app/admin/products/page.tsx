@@ -1,76 +1,94 @@
-import { Button } from "@/components/ui/button";
-import { Plus, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { fetchProducts } from "@/lib/db-queries";
+import Link from "next/link";
+import { requireAdmin } from "@/lib/admin-auth";
+import { fetchAdminProducts } from "@/lib/db-queries";
 import { formatPrice } from "@/lib/utils";
+import { AdminPageHeader, AdminTable } from "@/components/admin/admin-ui";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Plus, Pencil } from "lucide-react";
+import { ProductToggle } from "./product-toggle";
 
 export default async function AdminProductsPage() {
-  const { products } = await fetchProducts({ limit: 1000 });
+  await requireAdmin();
+  const products = await fetchAdminProducts();
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-black text-charcoal">Products</h1>
-        <Button>
-          <Plus className="h-4 w-4" />
-          Add Product
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Products"
+        description={`${products.length} products in catalog`}
+        action={
+          <Button asChild>
+            <Link href="/admin/products/new">
+              <Plus className="h-4 w-4" />
+              Add Product
+            </Link>
+          </Button>
+        }
+      />
 
-      <div className="relative mb-6 max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
-        <Input placeholder="Search products..." className="pl-10" />
-      </div>
-
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-soft-beige">
-            <tr>
-              <th className="text-left p-4 font-semibold text-charcoal">
-                Product
-              </th>
-              <th className="text-left p-4 font-semibold text-charcoal hidden sm:table-cell">
-                Category
-              </th>
-              <th className="text-left p-4 font-semibold text-charcoal">
-                Price
-              </th>
-              <th className="text-left p-4 font-semibold text-charcoal hidden md:table-cell">
-                Stock
-              </th>
-              <th className="text-left p-4 font-semibold text-charcoal hidden md:table-cell">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {products?.map((product: any) => (
-              <tr
-                key={product.id}
-                className="border-t border-gray-50 hover:bg-soft-beige/50"
-              >
-                <td className="p-4">
-                  <p className="font-semibold text-charcoal">{product.name}</p>
-                  <p className="text-xs text-muted">{product.sku}</p>
-                </td>
-                <td className="p-4 text-muted hidden sm:table-cell">
-                  {product.category?.name}
-                </td>
-                <td className="p-4 font-semibold">
-                  {formatPrice(Number(product.basePrice))}
-                </td>
-                <td className="p-4 hidden md:table-cell">{product.stock}</td>
-                <td className="p-4 hidden md:table-cell">
-                  <Badge variant={product.stock > 10 ? "accent" : "default"}>
-                    {product.stock > 10 ? "In Stock" : "Low Stock"}
-                  </Badge>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <AdminTable
+        data={products}
+        emptyMessage="No products yet. Run npm run db:seed to populate."
+        columns={[
+          {
+            key: "name",
+            header: "Product",
+            render: (p) => (
+              <div>
+                <p className="font-semibold text-charcoal">{p.name}</p>
+                <p className="text-xs text-muted">{p.sku}</p>
+              </div>
+            ),
+          },
+          {
+            key: "category",
+            header: "Category",
+            className: "hidden sm:table-cell",
+            render: (p) => <span className="text-muted">{p.category.name}</span>,
+          },
+          {
+            key: "price",
+            header: "Price",
+            render: (p) => (
+              <span className="font-semibold">{formatPrice(Number(p.basePrice))}</span>
+            ),
+          },
+          {
+            key: "stock",
+            header: "Stock",
+            className: "hidden md:table-cell",
+            render: (p) => p.stock,
+          },
+          {
+            key: "status",
+            header: "Status",
+            className: "hidden md:table-cell",
+            render: (p) => (
+              <Badge variant={p.isActive ? (p.stock > 10 ? "accent" : "default") : "sale"}>
+                {!p.isActive ? "Inactive" : p.stock > 10 ? "In Stock" : "Low Stock"}
+              </Badge>
+            ),
+          },
+          {
+            key: "active",
+            header: "Active",
+            render: (p) => <ProductToggle id={p.id} isActive={p.isActive} />,
+          },
+          {
+            key: "actions",
+            header: "",
+            render: (p) => (
+              <Button asChild variant="ghost" size="sm">
+                <Link href={`/admin/products/${p.id}/edit`}>
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Link>
+              </Button>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

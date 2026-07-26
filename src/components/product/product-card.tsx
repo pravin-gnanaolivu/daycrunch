@@ -1,10 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import { Heart, ShoppingBag, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ProductImage } from "@/components/ui/product-image";
 import { formatPrice, calculateDiscount, cn } from "@/lib/utils";
 import { useCartStore } from "@/store/cart-store";
 import { useWishlistStore } from "@/store/wishlist-store";
@@ -17,22 +18,37 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, className }: ProductCardProps) {
+  const [mounted, setMounted] = useState(false);
   const addToCart = useCartStore((s) => s.addItem);
   const { toggleItem, hasItem } = useWishlistStore();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const basePrice = Number(product.basePrice || product.price || 0);
   const compareAtPrice = product.compareAtPrice
     ? Number(product.compareAtPrice)
     : undefined;
   const discount = calculateDiscount(basePrice, compareAtPrice);
-  const isWishlisted = hasItem(product.id);
+  const isWishlisted = mounted && hasItem(product.id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (product.isActive === false) {
+      toast.error("This product is currently unavailable");
+      return;
+    }
+
+    if ((product.stock ?? 0) <= 0) {
+      toast.error("This product is out of stock");
+      return;
+    }
     const imageUrl =
       typeof product.images?.[0] === "string"
         ? product.images[0]
-        : product.images?.[0]?.url || "/placeholder.jpg";
+        : product.images?.[0]?.url || "/placeholder.svg";
 
     addToCart({
       productId: product.id,
@@ -62,16 +78,15 @@ export function ProductCard({ product, className }: ProductCardProps) {
       )}
     >
       <div className="relative aspect-square overflow-hidden bg-soft-beige">
-        <Image
+        <ProductImage
           src={
             typeof product.images?.[0] === "string"
               ? product.images[0]
-              : product.images?.[0]?.url || "/placeholder.jpg"
+              : product.images?.[0]?.url
           }
           alt={product.name}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          size="card"
+          className="transition-transform duration-500 group-hover:scale-105"
         />
 
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">
@@ -92,9 +107,18 @@ export function ProductCard({ product, className }: ProductCardProps) {
         </button>
 
         <div className="absolute bottom-0 inset-x-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-          <Button size="sm" className="w-full" onClick={handleAddToCart}>
+          <Button
+            size="sm"
+            className="w-full"
+            onClick={handleAddToCart}
+            disabled={product.isActive === false || (product.stock ?? 0) <= 0}
+          >
             <ShoppingBag className="h-4 w-4" />
-            Quick Add
+            {product.isActive === false
+              ? "Unavailable"
+              : (product.stock ?? 0) <= 0
+                ? "Out of Stock"
+                : "Quick Add"}
           </Button>
         </div>
       </div>

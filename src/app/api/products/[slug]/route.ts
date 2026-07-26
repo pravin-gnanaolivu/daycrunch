@@ -25,7 +25,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       },
     });
 
-    if (!product) {
+    if (!product || !product.isActive) {
       return Response.json({ error: "Product not found" }, { status: 404 });
     }
 
