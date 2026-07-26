@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { fetchAllProducts } from "@/lib/db-queries";
 import { MOCK_PRODUCTS } from "@/lib/mock-data";
 import { CATEGORIES } from "@/lib/constants";
+import type { Product } from "@/types";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://daycrunch.in";
@@ -30,15 +31,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  let products = [];
+  let products: Product[] = MOCK_PRODUCTS;
   try {
     products = await fetchAllProducts();
   } catch (error) {
     console.error("Error fetching products for sitemap:", error);
-    products = MOCK_PRODUCTS;
   }
 
-  const productPages = products.map((product) => ({
+  const productPages = products.map((product: Product) => ({
     url: `${baseUrl}/product/${product.slug}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
